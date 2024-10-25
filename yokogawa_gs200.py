@@ -2,7 +2,7 @@ import pyvisa as visa
 
 
 class gs200:
-    def __init__(self, address, verbatim=False, visa_backend=''):
+    def __init__(self, address, verbatim=False, visa_backend=None):
         self._inst = visa.ResourceManager(visa_backend).open_resource(address)
         # self._inst.timeout = 2500
         self._inst.write_termination = '\r'
@@ -214,7 +214,12 @@ class gs200:
         return self._com(':STATus:EVENt?')
     
     def status_enable(self, register='?'):
-        if 
+        if str(register).isnumeric():
+            register = " " + str(register)
+        elif register=='?':
+            register = register
+        else:
+            raise Exception('InvalidArgumentException: Argument must be either an interget between 1 and 2^16 or \'?\' ' )
         return self._com(':STATus:ENABle{}'.format(register))
         
     def status_error(self):
