@@ -1,5 +1,26 @@
 import pyvisa as visa
 
+def format_num(arg, units=1, limits=(-float('inf'),float('inf'))) -> str:
+    if arg == None or arg == '?':
+        return '?'
+    else:
+        # TODO: Make dictionary of units
+        arg = float(arg)*units
+        if limits[0]<=arg<=limits[1]:
+            return ' ' + str(arg)
+        else:
+            raise Exception("OutOfRangeException: Value must be between {} and {}.".format(limits[0], limits[1]))
+
+def format_from_dict(arg, arg_dict) -> str:
+    if arg == None:
+        arg = '?'
+    arg = str(arg).lower()
+    try:
+        return arg_dict[arg]
+    except:
+        print("InvalidInputError: Argument must be : {}".format(list(arg_dict.keys())))
+        return '?' # FIXME: There should be a better way to handle this error with querying the device.
+
 
 class gs200:
     def __init__(self, address, verbatim=False, visa_backend=None):
@@ -38,7 +59,7 @@ class gs200:
 #################
 # Output Command
 #################
-    def output(self, state='?'):
+    def output(self, state=None):
         states = {'true': ' on',
                   'on' : ' on',
                   True : ' on',
@@ -47,87 +68,50 @@ class gs200:
                   False: ' false',
                   '?': '?'
                   }
-        if state in states:
-            return self._com(':OUTPut{}'.format(states[state]))
-        else:
-            raise Exception('InvalideOutputStateException. Argument must be \'on\' or \'off\'.' )
+        format_from_dict(state, states)
+        return self._com(':OUTPut{}'.format(state))
 #################
 # Source Commands
 #################
 
-    def function(self, function='?'):
+    def function(self, function=None):
         functions={'curr': ' current',
                    'current': ' current',
                    'volt':' voltage',
                    'voltage': ' voltage',
                    '?':'?'
                    }
-        if function in functions:
-            return self._com('source:function{}'.format(functions[function]))
-        else:
-            raise Exception('InvalidefunctionException. Argument must be \'current\' or \'voltage\'' )
+        format_from_dict(function, functions)
+        return self._com('source:function{}'.format(function))
 
 
-    def range(self, range='?'):
-        # get function
-
-        ranges_v = [0.01, 0.1, 1, 10, 30]
-        ranges_i = [1,10,100,200]
+    def source_range(self, source_range=None):
+        ranges_v = {0.01:'0.01', 0.1:'0.1', 1:'1', 10:'10', 30:'30', '?':'?'}
+        ranges_i = {0.001:'0.001', 0.01:'0.01', 0.1:'0.1', 0.2:'0.2', '?':'?'}
         if self.function()=='CURR':
             ranges = ranges_i
         else:
             ranges = ranges_v
-            
-        if range in ranges or float(range) in ranges:        
-            range = " " + str(range)
-        elif range == '?':
-            pass
-        else:
-            raise Exception('InvalidArgumentException. Range must be 0.01, 0.1, 1, 10, 30 for a voltage source or 1, 10, 100, 200 for a current source.')
-        return self._com('source:range{}'.format(range))
+        source_range = format_from_dict(source_range, ranges)
+        return self._com('source:range{}'.format(source_range))
             
 
-    def level(self, level='?'):
-        ranges = {0.01 : 0.012,
-                  0.1  : 0.12,
-                  1    : 1.2,
-                  10   : 12.,
-                  30   : 32.,
-                  1    : 1.2,
-                  10   : 12.,
-                  100  : 120.,
-                  200  : 200.
-                  }
-            
-        if level == 'auto':
-            level = " auto"
-        elif level.isnumeric():
-            max_level = float(ranges[float(self.range())])
-            if abs(float(level)) <= max_level:
-                 level = " " + str(level)
-            else:
-                raise Exception('OutOfRangeException: Range is set to \u00B1{}.'.format(max_level))
-        elif level != '?':
-            raise Exception('InvalidArgumentException: Level must be either numeric, \'auto\' or \'?\'.')
-        
-        return self._com('source:level{}'.format(level))
+    def level(self, level=None):
+        if self.function() == 'CURR':
+            limit = 0.2
+        else:
+            limit = 32
+        level = format_num(level, limits=(-limit, limit))        
+        return self._com('source:level:auto{}'.format(level))
  
             
-    def protection_voltage(self, voltage='?'):
-        if str(voltage).isnumeric() and float(voltage)<=32:
-            voltage = " " + voltage
-        elif voltage != '?':
-            raise Exception('InvalidArgumentException: Argument must be either a number below 32 or \'?\'.')
-        
+    def protection_voltage(self, voltage=None):
+        voltage = format_num(voltage, limits=(-32,32))
         return self._com(':SOURce:PROTection:VOLTage{}'.format(voltage))
             
-    def protection_current(self, current='?'):
-         if str(current).isnumeric() and float(current)<=200:
-            current = " " + current
-         elif current != '?':
-            raise Exception('InvalidArgumentException: Argument must be either a number below 200 or \'?\'.')
-
-         return self._com(':SOURce:PROTection:CURRent{}'.format(current))
+    def protection_current(self, current=None):
+        current = format_num(current, limits=(-0.2, 0.2))
+        return self._com(':SOURce:PROTection:CURRent{}'.format(current))
 ###############
 # Program Commands
 ###############
@@ -160,32 +144,15 @@ class gs200:
 ###############
 # Route Commands (BNC I/O)
 ###############
-    def bnc_out(self, option='?'):
-        option = option.lower()
-        options ={'trig', 'trigger'
-                  'output', 'outp',
-                  'read', 'ready',
-                 }
-
-        if option in options:
-            option = " " + option
-        elif option != '?':
-            raise Exception('InvalidArgumentException: Argument must be either \'trigger\',  \'output \',  \'ready\' or \'?\'.')
-        
+    def bnc_out(self, option=None):
+        options ={'trig':'trigger', 'output':'outp', 'read':'ready'}
+        option = format_from_dict(option, options)        
         return self._com(':ROUTe:BNCO{}'.format(option))
 
     
-    def bnc_in(self, option='?'):
-        option = option.lower()
-        options ={'trig', 'trigger'
-                  'output', 'outp',
-                 }
-
-        if option in options:
-            option = " " + option
-        elif option != '?':
-            raise Exception('InvalidArgumentException: Argument must be either \'trigger\',  \'output \' or \'?\'.')
-            
+    def bnc_in(self, option=None):
+        options ={'trig':'trigger', 'output':'outp'}
+        option = format_from_dict(option,options)
         return self._com(':ROUTe:BNCI{}'.format(option))
     
 ###############
@@ -195,7 +162,6 @@ class gs200:
     def error(self):
         return self._com(':SYSTem:ERRor')
         
-
     def local(self):
         return self._com(':SYSTem:LOCal')
     
@@ -217,13 +183,8 @@ class gs200:
     def event(self):
         return self._com(':STATus:EVENt?')
     
-    def status_enable(self, register='?'):
-        if str(register).isnumeric():
-            register = " " + str(register)
-        elif register=='?':
-            register = register
-        else:
-            raise Exception('InvalidArgumentException: Argument must be either an interget between 1 and 2^16 or \'?\' ' )
+    def status_enable(self, register=None):
+        register = format_num(register, limits=(0,2**16))
         return self._com(':STATus:ENABle{}'.format(register))
         
     def status_error(self):
