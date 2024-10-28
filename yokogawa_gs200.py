@@ -3,11 +3,15 @@ import pyvisa as visa
 
 class gs200:
     def __init__(self, address, verbatim=False, visa_backend=None):
-        self._inst = visa.ResourceManager(visa_backend).open_resource(address)
+        if visa_backend==None:
+            self._inst = visa.ResourceManager().open_resource(address)
+        else:
+            self._inst = visa.ResourceManager(visa_backend).open_resource(address)
         # self._inst.timeout = 2500
         self._inst.write_termination = '\r'
         self._inst.read_termination = '\n'
         # self._inst.inst.chunk_size=1024
+        self.verbatim = verbatim
         identity = self.identify()
         print("Identity: {}".format(identity))
         if "YOKOGAWA,GS210" not in identity or"YOKOGAWA,GS211" not in identity :
