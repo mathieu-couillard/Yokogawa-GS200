@@ -1,6 +1,6 @@
 import pyvisa as visa
 
-def format_num(arg, units=1, limits=(-float('inf'),float('inf'))) -> str:
+def format_num(arg, units=1, limits=(-float('inf'),float('inf')), function_name='') -> str:
     if arg == None or arg == '?':
         return '?'
     else:
@@ -9,16 +9,16 @@ def format_num(arg, units=1, limits=(-float('inf'),float('inf'))) -> str:
         if limits[0]<=arg<=limits[1]:
             return ' ' + str(arg)
         else:
-            raise Exception("OutOfRangeException: Value must be between {} and {}.".format(limits[0], limits[1]))
+            raise Exception("OutOfRangeException: {} value must be between {} and {}. arg = {}".format(function_name, limits[0], limits[1], arg), '?')
 
-def format_from_dict(arg, arg_dict) -> str:
+def format_from_dict(arg, arg_dict, function_name='') -> str:
     if arg == None:
         arg = '?'
     arg = str(arg).lower()
     try:
         return arg_dict[arg]
     except:
-        print("InvalidInputError: Argument must be : {}".format(list(arg_dict.keys())))
+        print("InvalidInputError: {} argument must be : {}. Argument values is {}".format(function_name, list(arg_dict.keys()), arg))
         return '?' # FIXME: There should be a better way to handle this error with querying the device.
 
 
@@ -62,13 +62,13 @@ class gs200:
     def output(self, state=None):
         states = {'true': ' on',
                   'on' : ' on',
-                  True : ' on',
+                  '1' : ' on',
                   'false': ' off',
                   'off': ' off',
-                  False: ' false',
+                  '0' : ' off',
                   '?': '?'
                   }
-        format_from_dict(state, states)
+        state = format_from_dict(state, states, function_name="output(arg)")
         return self._com(':OUTPut{}'.format(state))
 #################
 # Source Commands
@@ -81,18 +81,18 @@ class gs200:
                    'voltage': ' voltage',
                    '?':'?'
                    }
-        format_from_dict(function, functions)
+        function = format_from_dict(function, functions, function_name='function(arg)')
         return self._com('source:function{}'.format(function))
 
 
     def source_range(self, source_range=None):
-        ranges_v = {0.01:'0.01', 0.1:'0.1', 1:'1', 10:'10', 30:'30', '?':'?'}
-        ranges_i = {0.001:'0.001', 0.01:'0.01', 0.1:'0.1', 0.2:'0.2', '?':'?'}
+        ranges_v = {'0.01':' 0.01', '0.1':' 0.1', '1':' 1', '10':' 10', '30':' 30', '?':'?'}
+        ranges_i = {'0.001':' 0.001', '0.01':' 0.01', '0.1': ' 0.1', '0.2':' 0.2', '?':'?'}
         if self.function()=='CURR':
             ranges = ranges_i
         else:
             ranges = ranges_v
-        source_range = format_from_dict(source_range, ranges)
+        source_range = format_from_dict(source_range, ranges, function_name='source_range(arg)')
         return self._com('source:range{}'.format(source_range))
             
 
@@ -101,16 +101,16 @@ class gs200:
             limit = 0.2
         else:
             limit = 32
-        level = format_num(level, limits=(-limit, limit))        
+        level = format_num(level, limits=(-limit, limit), function_name='level(arg)')        
         return self._com('source:level:auto{}'.format(level))
  
             
     def protection_voltage(self, voltage=None):
-        voltage = format_num(voltage, limits=(-32,32))
+        voltage = format_num(voltage, limits=(-32,32), function_name='protection_voltage(arg)')
         return self._com(':SOURce:PROTection:VOLTage{}'.format(voltage))
             
     def protection_current(self, current=None):
-        current = format_num(current, limits=(-0.2, 0.2))
+        current = format_num(current, limits=(-0.2, 0.2), function_name='protection_current(arg)')
         return self._com(':SOURce:PROTection:CURRent{}'.format(current))
 ###############
 # Program Commands
@@ -146,13 +146,13 @@ class gs200:
 ###############
     def bnc_out(self, option=None):
         options ={'trig':'trigger', 'output':'outp', 'read':'ready'}
-        option = format_from_dict(option, options)        
+        option = format_from_dict(option, options, function_name="bnc_out(arg)")        
         return self._com(':ROUTe:BNCO{}'.format(option))
 
     
     def bnc_in(self, option=None):
         options ={'trig':'trigger', 'output':'outp'}
-        option = format_from_dict(option,options)
+        option = format_from_dict(option,options, function_name="bnc_in(arg)")
         return self._com(':ROUTe:BNCI{}'.format(option))
     
 ###############
@@ -184,7 +184,7 @@ class gs200:
         return self._com(':STATus:EVENt?')
     
     def status_enable(self, register=None):
-        register = format_num(register, limits=(0,2**16))
+        register = format_num(register, limits=(0,2**16), function_name='status_enable(arg)')
         return self._com(':STATus:ENABle{}'.format(register))
         
     def status_error(self):
@@ -211,7 +211,10 @@ class gs200:
 
 
 if __name__ == '__main__':
-    addr='192.168.*.*'
+    addr='TCPIP::192.168.0.125::INSTR'
     source = gs200(addr, visa_backend='@py')
     source.function('current')
+    source.level(.1)
+    source.protection_voltage(1)
+    source.output(1)
     
