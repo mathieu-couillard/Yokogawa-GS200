@@ -213,8 +213,11 @@ class gs200:
 if __name__ == '__main__':
     addr='TCPIP::192.168.0.125::INSTR'
     source = gs200(addr, visa_backend='@py')
-    source.function('current')
-    source.level(.1)
-    source.protection_voltage(1)
-    source.output(1)
+    source.function('current') # Set to constant current
+    source.level(0.15)  # Set level to 150 mA
+    source.protection_voltage(1) # Set protection voltage to 1 V
+    source.output(True) # turn on output
+    
+    print(source.level()) # Get the set level and print value
+    source.output(False)
     
