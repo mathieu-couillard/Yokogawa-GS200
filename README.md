@@ -7,11 +7,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 # Requirements
 pyvisa
-
 visa backend (ivi, pyvisa-py, R&S)
 
 # Usage
-
 Methods with write and query will default to the query when no argument is given.
 ```
 source.level() # query the set level
