@@ -36,7 +36,7 @@ class gs200:
         identity = self.identify()
         print("Identity: {}".format(identity))
         if "YOKOGAWA,GS210" not in identity or"YOKOGAWA,GS211" not in identity :
-            Exception("WARNING: This IP:{} is not a Yokogawa GS200 DC source."
+            Exception("WARNING: The device: {} is not a Yokogawa GS200 DC source."
                       "\nSome commands may not work.".format(address))
 
         self.verbatim = verbatim  # Print every command before sending
