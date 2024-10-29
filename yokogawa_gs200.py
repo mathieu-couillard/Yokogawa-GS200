@@ -1,3 +1,10 @@
+"""
+June 2022
+@author: Mathieu Couillard
+
+Driver for Yokogawa GS200 DC source
+"""
+
 import pyvisa as visa
 
 def format_num(arg, units=1, limits=(-float('inf'),float('inf')), function_name='') -> str:
