@@ -17,7 +17,7 @@ source.level() # query the set level
 source.level(0.1) # set the level 0.1 volts or amperes depending on the set function is constant voltage or constant current, respectively. 
 ```
 
-Simple examples code to set to the device to constant current or 150 mA and a protection voltage limit of 1 V.
+Simple examples code to set to the device to constant current of 150 mA and a protection voltage limit of 1 V.
 
 ```
 addr='TCPIP::192.168.0.125::INSTR'
